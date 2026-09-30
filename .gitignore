@@ -1,0 +1,17 @@
+# Build folders
+build/
+out/
+cmake-build-*/
+
+# Visual Studio files
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln
+*.vcxproj*
+
+# Compiled objects
+*.o
+*.obj
+*.exe
