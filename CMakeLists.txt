@@ -18,6 +18,11 @@ else()
 endif()
 
 # Add your executable
-add_executable(wirehaul src/main.cpp)
+add_executable(wirehaul 
+       src/main.cpp
+       src/Bencode.cpp
+)
 
 # If you use CMake with WSL, it will automatically apply the GCC flags!
+
+target_include_directories(wirehaul PRIVATE include)
