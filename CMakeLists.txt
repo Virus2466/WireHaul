@@ -21,8 +21,14 @@ endif()
 add_executable(wirehaul 
        src/main.cpp
        src/Bencode.cpp
-)
+ "tests/bencode_tests.cpp" "include/Sha1.cpp")
 
 # If you use CMake with WSL, it will automatically apply the GCC flags!
 
 target_include_directories(wirehaul PRIVATE include)
+
+
+enable_testing()
+add_executable(bencode_tests tests/bencode_tests.cpp src/Bencode.cpp "include/Sha1.cpp")
+target_include_directories(bencode_tests PRIVATE include)
+add_test(NAME bencode COMMAND bencode_tests)
