@@ -2,7 +2,10 @@
 #include<iterator>
 #include<fstream>
 #include<cstdio>
+
+
 #include "Bencode.hpp"
+#include "Metainfo.hpp"
 
 using namespace wirehaul::bencode;
 
@@ -28,13 +31,21 @@ int main(int argc , char** argv)
 	std::cout << "\nas text: " << buf.substr(0, 40) << '\n';
 	try
 	{
-		auto root = decode(buf);
+		/*auto root = decode(buf);
 		auto& d = *root.as<BencodeDict>();
-		std::cout << "info dict bytes :" << d.at("info").raw.size() << '\n';
-
+		std::cout << "info dict bytes :" << d.at("info").raw.size() << '\n';*/
+		auto m = wirehaul::parseMetainfo(buf);
+		std::cout << "name:           " << m.name
+			<< "\nsize:         " << m.totalLength
+			<< "\npiece length: " << m.pieceLength
+			<< "\npieces:       " << m.pieceHashes.size()
+			<< "\nfiles:        " << m.files.size()
+			<< "\ninfohash:     " << wirehaul::toHex(m.infoHash) << '\n';
+		for (auto& t : m.trackers) {
+			std::cout << "tracker:       " << t << '\n';
+		}
 	} 
-	catch (const ParseError& e)
-	{
+	catch (const wirehaul::bencode::ParseError& e){
 		std::cerr << "parse error : " << e.what() << '\n';
 		return 1;
 	}

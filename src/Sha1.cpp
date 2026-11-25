@@ -26,7 +26,7 @@ namespace wirehaul {
 
 			for (int i = 0; i < 80; ++i) {
 				u32 f, k;
-				if (i < 20) { f = (b & c) | (-b & d); k = 0x5A827999;
+				if (i < 20) { f = (b & c) | (~b & d); k = 0x5A827999;
 				}
 				else if (i < 40) { f = b ^ c ^ d;                   k = 0x6ED9EBA1; }
 				else if (i < 60) { f = (b & c) | (b & d) | (c & d); k = 0x8F1BBCDC; }
@@ -59,7 +59,7 @@ namespace wirehaul {
 
 		Sha1Digest out;
 		for (int i = 0; i < 5; ++i) {
-			for (int j = 0; j < 5; ++j) {
+			for (int j = 0; j < 4; ++j) {
 				out[4 * i + j] = u8(h[i] >> (24 - 8 * j));
 			}
 		}
