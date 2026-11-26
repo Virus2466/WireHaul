@@ -11,13 +11,17 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+find_package(CURL REQUIRED)
+
 add_executable(wirehaul
     src/main.cpp
     src/Bencode.cpp
     src/Sha1.cpp
     src/Metainfo.cpp
+    src/Tracker.cpp
 )
 target_include_directories(wirehaul PRIVATE include)
+target_link_libraries(wirehaul PRIVATE CURL::libcurl)
 
 enable_testing()
 

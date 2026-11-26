@@ -41,6 +41,7 @@ int main(int argc , char** argv)
 			<< "\npieces:       " << m.pieceHashes.size()
 			<< "\nfiles:        " << m.files.size()
 			<< "\ninfohash:     " << wirehaul::toHex(m.infoHash) << '\n';
+
 		for (auto& t : m.trackers) {
 			std::cout << "tracker:       " << t << '\n';
 		}
