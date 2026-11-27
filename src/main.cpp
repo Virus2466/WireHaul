@@ -1,75 +1,76 @@
-#include<iostream>
-#include<iterator>
-#include<fstream>
-#include<cstdio>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <string>
 
-
-#include "Bencode.hpp"
 #include "Metainfo.hpp"
+#include "PeerWire.hpp"
 #include "Tracker.hpp"
 
-using namespace wirehaul::bencode;
+// this prints the torrent's basic details (name, size, pieces, files, info hash)
+void printTorrentInfo(const wirehaul::MetaInfo& m) {
+	std::cout << "name:         " << m.name
+		<< "\nsize:         " << m.totalLength
+		<< "\npiece length: " << m.pieceLength
+		<< "\npieces:       " << m.pieceHashes.size()
+		<< "\nfiles:        " << m.files.size()
+		<< "\ninfohash:     " << wirehaul::toHex(m.infoHash) << '\n';
+}
 
+// this tries the first few peers one by one until one of them talks to us
+void tryPeers(const wirehaul::AnnounceResult& r, const wirehaul::MetaInfo& m, const wirehaul::PeerId& myId) {
+	for (size_t i = 0; i < r.peers.size() && i < 10; ++i) {
+		const auto& p = r.peers[i];
+		try {
+			auto s = wirehaul::runPeerSession(p, m, myId);
+			std::cout << p.ip << ':' << p.port << " ok, has "
+				<< wirehaul::countPieces(s.bitfield, m.pieceHashes.size())
+				<< " of " << m.pieceHashes.size() << " pieces\n";
+			for (auto id : s.messageIds) std::cout << "  got: " << wirehaul::messageName(id) << '\n';
+			return;   // one working peer is enough for now
+		}
+		catch (const std::exception& e) {
+			std::cout << p.ip << ':' << p.port << " failed: " << e.what() << '\n';
+		}
+	}
+}
 
-
-
-int main(int argc , char** argv) 
-{
+// this is where the program starts: read the torrent file, ask a tracker for peers, talk to a peer
+int main(int argc, char** argv) {
 	if (argc < 2) { std::cerr << "usage: wirehaul <file.torrent>\n"; return 1; }
+
 	std::ifstream f(argv[1], std::ios::binary);
 	if (!f) { std::cerr << "cannot open " << argv[1] << '\n'; return 1; }
-
 	std::string buf((std::istreambuf_iterator<char>(f)), {});
 
-
-	// for checking torrent working.
-	/*std::cout << "size: " << buf.size() << "\nfirst bytes: ";
-	for (size_t k = 0; k < buf.size() && k < 16; ++k)
-		std::printf("%02x ", (unsigned char)buf[k]);*/
-
-
-
-	std::cout << "\n" << buf.substr(0, 40) << '\n';
-	try
-	{
-		/*auto root = decode(buf);
-		auto& d = *root.as<BencodeDict>();
-		std::cout << "info dict bytes :" << d.at("info").raw.size() << '\n';*/
+	try {
 		auto m = wirehaul::parseMetainfo(buf);
-		std::cout << "name:         " << m.name
-			<< "\nsize:         " << m.totalLength
-			<< "\npiece length: " << m.pieceLength
-			<< "\npieces:       " << m.pieceHashes.size()
-			<< "\nfiles:        " << m.files.size()
-			<< "\ninfohash:     " << wirehaul::toHex(m.infoHash) << '\n';
+		printTorrentInfo(m);
 
 		wirehaul::AnnounceParams ap;
 		ap.peerId = wirehaul::makePeerId();
 		ap.left = m.totalLength;
 
-		std::cerr << "trackers: " << m.trackers.size() << '\n';
 		for (auto& t : m.trackers) {
-			if (t.rfind("http" , 0) != 0) { continue;}
+			if (t.rfind("http", 0) != 0) continue;   // udp:// trackers are not supported yet
 			try {
 				auto r = wirehaul::announce(t, m, ap);
 				std::cout << t << ": " << r.peers.size() << " peers, next announce in " << r.interval << "s\n";
-				for (size_t i = 0; i < r.peers.size() && i < 5; ++i) {
-					std::cout << " " << r.peers[i].ip << ':' << r.peers[i].port << '\n';
-				}
 
-				ap.event = wirehaul::AnnounceEvent::Stopped; // deregister , since we aren't Listening yet ( work on this later)
-				try { wirehaul::announce(t, m, ap); } catch(...){}
-				break;
-			} catch(const std::exception& e){
+				tryPeers(r, m, ap.peerId);
+
+				ap.event = wirehaul::AnnounceEvent::Stopped;   // tell the tracker we are leaving
+				try { wirehaul::announce(t, m, ap); }
+				catch (...) {}
+				break;                                         // one working tracker is enough for now
+			}
+			catch (const std::exception& e) {
 				std::cerr << t << ": " << e.what() << '\n';
 			}
 		}
-	} 
-	catch (const wirehaul::bencode::ParseError& e){
-		std::cerr << "parse error : " << e.what() << '\n';
+	}
+	catch (const std::exception& e) {
+		std::cerr << "error: " << e.what() << '\n';
 		return 1;
 	}
-
-	
-
 }
